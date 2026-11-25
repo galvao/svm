@@ -1,0 +1,66 @@
+#! /usr/bin/php
+<?php
+
+declare(strict_types = 1);
+
+define('USAGE', 'svm bump|dry-bump|bump-and-tell -M|--major | -m|--minor | -p|--patch <VERSION_FILE>');
+
+if ($_SERVER['argc'] !== 4) {
+    echo 'Error: Insufficient arguments.' . PHP_EOL . 'Usage: ' . USAGE . PHP_EOL;
+    exit(1);
+}
+
+list($self, $command, $flag, $file) = $_SERVER['argv'];
+
+if (!is_file($file)) {
+    echo 'Error: ' . $file . ' is not a regular file.' . PHP_EOL;
+    exit(1);
+}
+
+if (!is_readable($file)) {
+    echo 'Error: ' . $file . ' is not readable.' . PHP_EOL;
+    exit(1);
+}
+
+if (!is_writable($file)) {
+    echo 'Error: ' . $file . ' is not writable.' . PHP_EOL;
+    exit(1);
+}
+
+if (!in_array($command, ['bump', 'bump-and-tell', 'dry-bump'])) {
+    echo 'Unknown command: ' . $command . '.' . PHP_EOL;
+    exit(1);
+}
+
+if (!in_array($flag, ['-M', '--major', '-m', '--minor', '-p', '--patch'])) {
+    echo 'Unknown flag: ' . $flag . '.' . PHP_EOL;
+    exit(1);
+}
+
+$flag = str_replace('-', '', $flag);
+$rawVersion = trim(file_get_contents($file));
+
+list($major, $minor, $patch) = explode('.', $rawVersion);
+
+if (preg_match('/bump/', $command)) {
+    if ($flag === 'p') {
+        $patch = str_increment($patch);
+    } else if ($flag === 'm') {
+        $minor = str_increment($minor);
+        $patch = 0;
+    } else if ($flag === 'M') {
+        $major = str_increment($major);
+        $minor = 0;
+        $patch = 0;
+    }
+
+    $result = sprintf('%s.%s.%s', $major, $minor, $patch);
+}
+
+echo $result;
+
+if (!preg_match('/^dry/', $command)) {
+    file_put_contents($file, $result);
+}
+
+exit(0);
